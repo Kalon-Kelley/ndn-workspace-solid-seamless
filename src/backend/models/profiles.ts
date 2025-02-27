@@ -1,7 +1,7 @@
-import { Certificate } from '@ndn/keychain'
+import { Certificate, generateSigningKey, type PrivateKey, type PublicKey, type NamedSigner, type NamedVerifier } from '@ndn/keychain'
 import { base64ToBytes, bytesToBase64 } from '../../utils'
 import { Decoder, Encoder } from '@ndn/tlv'
-import { Data } from '@ndn/packet'
+import { Component, Data, ValidityPeriod } from '@ndn/packet'
 import { TypedModel } from './typed-models'
 
 export type Profile = {
@@ -49,5 +49,46 @@ export function fromBootParams(params: {
     trustAnchorB64: anchorB64,
     prvKeyB64: prvKeyB64,
     ownCertificateB64: certB64,
+  }
+}
+
+export async function createWorkspace(workspaceName: string, user: string): Promise<{
+  trustAnchor: Certificate;
+  prvKey: Uint8Array;
+  ownCertificate: Certificate;
+}> {
+  let wsPvt: PrivateKey
+  let wsPub: PublicKey
+  [wsPvt, wsPub] = await generateSigningKey(workspaceName)
+  const cert = await Certificate.selfSign({
+    privateKey: wsPvt as NamedSigner.PrivateKey,
+    publicKey: wsPub as NamedVerifier.PublicKey,
+  })
+  let userPvt: PrivateKey
+  let userPub: PublicKey
+  [userPvt, userPub] = await generateSigningKey(user)
+  const userCert = await Certificate.issue({
+    issuerPrivateKey: wsPvt as NamedSigner.PrivateKey,
+    publicKey: userPub,
+    issuerId: Component.from(workspaceName.replace(/^\//, '')),
+    validity: ValidityPeriod.daysFromNow(365),
+  })
+  // const prvKeyBits = await crypto.subtle.exportKey('pkcs8', userPvt)
+  // Self sign another certificate for user
+  // Issue a certificate with Certificate.issue using trust anchors private key
+  //   as private key, public key from user and issuer id as workspaceName w/o
+  //   the / and a default validity of 365 days
+
+  // Instead of doing this bootstrapWorkspace here just have the params returned
+  // and from onCreateWorkspace call bootstrapWorkspace since it is already
+  // included there
+  // do some await bootstrapWorkspace .then navigate to /workspace replace: true
+  // prvKey is the private key of the user, ownCertificate is also users
+  console.log(`${cert.name}\n`)
+  console.dir(userPvt)
+  return {
+    trustAnchor: cert,
+    prvKey: new TextEncoder().encode(`${userPvt.name}`),
+    ownCertificate: userCert,
   }
 }

@@ -11,9 +11,11 @@ import {
   Typography,
   IconButton,
   Button,
+  TextField,
+  Stack,
 } from '@suid/material'
 import { PersonAdd as PersonAddIcon, PlayArrow as PlayArrowIcon, Delete as DeleteIcon } from '@suid/icons-material'
-import { Profile, toBootParams as profileToBootParams, profiles as db } from '../../backend/models/profiles'
+import { Profile, toBootParams as profileToBootParams, profiles as db, createWorkspace } from '../../backend/models/profiles'
 import { For, createEffect, createSignal } from 'solid-js'
 import { useNdnWorkspace } from '../../Context'
 import { useNavigate } from '@solidjs/router'
@@ -21,6 +23,8 @@ import { useNavigate } from '@solidjs/router'
 export default function Profiles() {
   const { booted, bootstrapWorkspace } = useNdnWorkspace()!
   const [profiles, setProfiles] = createSignal<Profile[]>([])
+  const [workspaceUri, setWorkspaceUri] = createSignal('')
+  const [workspaceProfile, setWorkspaceProfile] = createSignal('')
   const navigate = useNavigate()
 
   createEffect(() => {
@@ -52,6 +56,25 @@ export default function Profiles() {
     }
   }
 
+  const onCreateWorkspace = () => {
+    const uri = workspaceUri().trim()
+    const profile = workspaceProfile().trim()
+    if (uri) {
+      console.log('Create workspace with URI:', uri, ' And Profile:', profile)
+      createWorkspace(uri, profile)
+        .then((opts) => {
+          bootstrapWorkspace({ ...opts }).then(() => {
+            navigate('/workspace', { replace: true })
+          })
+          setWorkspaceUri('')
+          setWorkspaceProfile('')
+        })
+        .catch(() => {
+          console.log('Error creating workspace')
+        })
+    }
+  }
+
   return (
     <Box sx={{ width: '100%' }}>
       <Paper sx={{ width: '100%', mb: 2 }}>
@@ -66,6 +89,43 @@ export default function Profiles() {
             <PersonAddIcon color="primary" />
           </IconButton>
         </Toolbar>
+        <Box sx={{ display: "flex", gap: 2, alignItems: "stretch", p: 2 }}>
+          <Stack spacing={1} sx={{ flex: 1 }}>
+            <TextField
+              fullWidth
+              required
+              label="Workspace URI"
+              name="workspace-uri"
+              type="text"
+              inputProps={{
+                style: {
+                  'font-family': '"Roboto Mono", ui-monospace, monospace',
+                  'white-space': 'pre',
+                },
+              }}
+              value={workspaceUri()}
+              onChange={(event) => setWorkspaceUri(event.target.value)}
+            />
+            <TextField
+              fullWidth
+              required
+              label="Workspace Profile"
+              name="workspace-profile"
+              type="text"
+              inputProps={{
+                style: {
+                  'font-family': '"Roboto Mono", ui-monospace, monospace',
+                  'white-space': 'pre',
+                },
+              }}
+              value={workspaceProfile()}
+              onChange={(event) => setWorkspaceProfile(event.target.value)}
+            />
+          </Stack>
+          <Button onClick={onCreateWorkspace} variant="contained" color="primary">
+            Create Workspace
+          </Button>
+        </Box>
         <TableContainer>
           <Table sx={{ minWidth: 300 }}>
             <TableHead>
