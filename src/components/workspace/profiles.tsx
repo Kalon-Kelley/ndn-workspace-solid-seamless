@@ -60,7 +60,6 @@ export default function Profiles() {
     const uri = workspaceUri().trim()
     const profile = workspaceProfile().trim()
     if (uri) {
-      console.log('Create workspace with URI:', uri, ' And Profile:', profile)
       createWorkspace(uri, profile)
         .then(() => db.loadAll())
         .then((items) => setProfiles(items))

@@ -1,5 +1,5 @@
-import { Button, Stack } from '@suid/material'
-import { Match, Switch, createEffect, createSignal } from 'solid-js'
+import { Button, Stack, Typography } from '@suid/material'
+import { Show, Match, Switch, createEffect, createSignal } from 'solid-js'
 import AppNamespace from './app-namespace'
 import BootSafebag from './boot-safebag'
 import { useNdnWorkspace } from '../../Context'
@@ -14,6 +14,8 @@ export default function Workspace() {
     stopWorkspace,
     trustAnchor: initAnchor,
     ownCertificate: initCertificate,
+    issuerPrvKey,
+    issuerId,
   } = useNdnWorkspace()!
   const [trustAnchor, setTrustAnchor] = createSignal<Certificate | undefined>(initAnchor())
   const [certificate, setCertificate] = createSignal<Certificate | undefined>(initCertificate())
@@ -83,8 +85,20 @@ export default function Workspace() {
     })
   }
 
+  // Add onCertIssue to issue a certificate for the provided identity (take in
+  // the self signed cert as B64 and create a certificate from it)
+  // recreate the wsGen using
+  // ECDSA.cryptoGenerate({ importPkcs8: [prvKeyBits, pubKeyBits] }, true);
+  // then get the signer needed for Certificate.issue
+  // createSigner(name, ECDSA, gen)
+
   return (
     <Stack spacing={2}>
+      <Show when={booted() && issuerPrvKey() && issuerId()}>
+        <Typography color="secondary" component={'span'}>
+          You own your workspace, create keys for others?
+        </Typography>
+      </Show>
       <AppNamespace trustAnchor={trustAnchor()} setTrustAnchor={setTrustAnchor} readOnly={inProgress() || booted()} />
       <Switch>
         <Match when={!booted()}>

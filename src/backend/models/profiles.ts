@@ -10,6 +10,8 @@ export type Profile = {
   trustAnchorB64: string
   prvKeyB64: string
   ownCertificateB64: string
+  issuerPrvKeyB64?: string
+  issuerId?: string
 }
 
 export const profiles = new TypedModel<Profile>('profiles', (profile) => profile.nodeId)
@@ -20,10 +22,18 @@ export function toBootParams(profile: Profile) {
   const trustAnchor = Certificate.fromData(Decoder.decode(anchorBytes, Data))
   const certBytes = base64ToBytes(profile.ownCertificateB64)
   const ownCertificate = Certificate.fromData(Decoder.decode(certBytes, Data))
+  let issuerPrvKey
+  let issuerId
+  if (profile.issuerPrvKeyB64 && profile.issuerId) {
+    issuerPrvKey = base64ToBytes(profile.issuerPrvKeyB64)
+    issuerId = Component.from(profile.issuerId)
+  }
   return {
     trustAnchor,
     prvKey,
     ownCertificate,
+    ...(issuerPrvKey && { issuerPrvKey }),
+    ...(issuerId && { issuerId }),
   }
 }
 
@@ -31,6 +41,8 @@ export function fromBootParams(params: {
   trustAnchor: Certificate
   prvKey: Uint8Array
   ownCertificate: Certificate
+  issuerPrvKey?: Uint8Array
+  issuerId?: Component
 }): Profile {
   const certWire = Encoder.encode(params.ownCertificate.data)
   const certB64 = bytesToBase64(certWire)
@@ -43,38 +55,54 @@ export function fromBootParams(params: {
   const nodeId = params.ownCertificate.name.getPrefix(params.ownCertificate.name.length - 4)
   const appPrefix = params.trustAnchor.name.getPrefix(params.trustAnchor.name.length - 4)
 
+  let issuerPrvKeyB64
+  let issuerId
+  if (params.issuerPrvKey && params.issuerId) {
+    issuerPrvKeyB64 = bytesToBase64(params.issuerPrvKey)
+    issuerId = params.issuerId.toString()
+  }
+
   return {
     workspaceName: appPrefix.toString(),
     nodeId: nodeId.toString(),
     trustAnchorB64: anchorB64,
     prvKeyB64: prvKeyB64,
     ownCertificateB64: certB64,
+    ...(issuerPrvKeyB64 && { issuerPrvKeyB64 }),
+    ...(issuerId && { issuerId }),
   }
 }
 
 export async function createWorkspace(workspaceName: string, user: string) {
-  let wsPvt: PrivateKey
-  let wsPub: PublicKey
-  [wsPvt, wsPub] = await generateSigningKey(workspaceName)
-  const cert = await Certificate.selfSign({
-    privateKey: wsPvt as NamedSigner.PrivateKey,
-    publicKey: wsPub as NamedVerifier.PublicKey,
-  })
-  const keyName = CertNaming.makeKeyName(Name.from(user as NameLike))
   const algo = ECDSA
-  const gen = await algo.cryptoGenerate({}, true)
-  const userPvt = createSigner(keyName, algo, gen)
-  const userPub = createVerifier(keyName, algo, gen)
-  const prvKeyBits = await crypto.subtle.exportKey('pkcs8', gen.privateKey)
+  const wsKeyName = CertNaming.makeKeyName(Name.from(workspaceName as NameLike))
+  // TODO(kalon-kelley) see if this like that of workspaceName so it doesn't
+  // have to be saved also
+  const wsGen = await algo.cryptoGenerate({}, true)
+  const wsPvt = createSigner(wsKeyName, algo, wsGen)
+  const wsPub = createVerifier(wsKeyName, algo, wsGen)
+  const wsPrvKeyBits = await crypto.subtle.exportKey('pkcs8', wsGen.privateKey)
+  const wsCert = await Certificate.selfSign({
+    privateKey: wsPvt,
+    publicKey: wsPub,
+  })
+  const userKeyName = CertNaming.makeKeyName(Name.from(user as NameLike))
+  const userGen = await algo.cryptoGenerate({}, true)
+  const userPvt = createSigner(userKeyName, algo, userGen)
+  const userPub = createVerifier(userKeyName, algo, userGen)
+  const userPrvKeyBits = await crypto.subtle.exportKey('pkcs8', userGen.privateKey)
+  const issuerId = Component.from(workspaceName.replace(/^\//, ''))
   const userCert = await Certificate.issue({
     issuerPrivateKey: wsPvt as NamedSigner.PrivateKey,
     publicKey: userPub,
-    issuerId: Component.from(workspaceName.replace(/^\//, '')),
+    issuerId: issuerId,
     validity: ValidityPeriod.daysFromNow(365),
   })
   await profiles.save(fromBootParams({
-    trustAnchor: cert,
-    prvKey: new Uint8Array(prvKeyBits),
+    trustAnchor: wsCert,
+    prvKey: new Uint8Array(userPrvKeyBits),
     ownCertificate: userCert,
+    issuerPrvKey: new Uint8Array(wsPrvKeyBits),
+    issuerId: issuerId,
   }))
 }

@@ -1,7 +1,7 @@
 // This file is the main file gluing all components and maintain a global context.
 // Should be changed to something better if refactor.
 import { Producer, produce, consume } from '@ndn/endpoint'
-import { Name, Interest } from '@ndn/packet'
+import { Name, Interest, Component } from '@ndn/packet'
 import * as nfdmgmt from '@ndn/nfdmgmt'
 import { getYjsDoc } from '@syncedstore/core'
 import * as Y from 'yjs'
@@ -32,6 +32,8 @@ export let nodeId: Name | undefined
 
 export let trustAnchor: Certificate | undefined
 export let ownCertificate: Certificate | undefined
+export let issuerPrvKey: Uint8Array | undefined
+export let issuerId: Component | undefined
 
 export let rootDoc: RootDocStore | undefined
 
@@ -139,6 +141,8 @@ export async function bootstrapWorkspace(opts: {
   prvKey: Uint8Array
   ownCertificate: Certificate
   inMemory?: boolean
+  issuerPrvKey?: Uint8Array
+  issuerId?: Component
 }) {
   if (bootstrapping) {
     console.error('Bootstrapping in progress or done')
@@ -149,6 +153,12 @@ export async function bootstrapWorkspace(opts: {
 
   trustAnchor = opts.trustAnchor
   ownCertificate = opts.ownCertificate
+  issuerPrvKey = opts.issuerPrvKey
+  issuerId = opts.issuerId
+
+  if (issuerPrvKey) {
+    console.log('Workspace was', issuerId, 'created with key', issuerPrvKey)
+  }
 
   // Certificates
   // To switch to persistent storage:

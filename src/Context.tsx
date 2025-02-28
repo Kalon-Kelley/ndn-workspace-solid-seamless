@@ -16,6 +16,7 @@ import * as main from './backend/main'
 import { type Certificate } from '@ndn/keychain'
 import { type Theme, type Breakpoint } from '@suid/material/styles'
 import type { Forwarder } from '@ndn/fw'
+import { Component } from '@ndn/packet'
 import { loadAll } from './backend/models/connections'
 import { Workspace } from '@ucla-irl/ndnts-aux/workspace'
 
@@ -34,10 +35,14 @@ type ContextType = {
     prvKey: Uint8Array
     ownCertificate: Certificate
     inMemory?: boolean
+    issuerPrvKey?: Uint8Array
+    issuerId?: Component
   }) => Promise<void>
   stopWorkspace: () => Promise<void>
   trustAnchor: () => Certificate | undefined
   ownCertificate: () => Certificate | undefined
+  issuerPrvKey: () => Uint8Array | undefined
+  issuerId: () => Component | undefined
   fileSystemSupported: Accessor<boolean>
   theme: Accessor<Theme<Breakpoint> | undefined>
   setTheme: Setter<Theme<Breakpoint> | undefined>
@@ -107,6 +112,8 @@ export function NdnWorkspaceProvider(props: ParentProps<Record<string, unknown>>
       return main.trustAnchor
     },
     ownCertificate: () => main.ownCertificate,
+    issuerPrvKey: () => main.issuerPrvKey,
+    issuerId: () => main.issuerId,
     fileSystemSupported: fileSystemSupported,
     theme,
     setTheme,
