@@ -62,16 +62,8 @@ export default function Profiles() {
     if (uri) {
       console.log('Create workspace with URI:', uri, ' And Profile:', profile)
       createWorkspace(uri, profile)
-        .then((opts) => {
-          bootstrapWorkspace({ ...opts }).then(() => {
-            navigate('/workspace', { replace: true })
-          })
-          setWorkspaceUri('')
-          setWorkspaceProfile('')
-        })
-        .catch(() => {
-          console.log('Error creating workspace')
-        })
+        .then(() => db.loadAll())
+        .then((items) => setProfiles(items))
     }
   }
 
