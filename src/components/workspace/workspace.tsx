@@ -1,6 +1,14 @@
-import { Button, Stack, Typography } from '@suid/material'
+import {
+  Button,
+  Stack,
+  Typography,
+  Card,
+  CardContent,
+  CardHeader,
+} from '@suid/material'
 import { Show, Match, Switch, createEffect, createSignal } from 'solid-js'
 import AppNamespace from './app-namespace'
+import GenerateCertificate from './cert-gen'
 import BootSafebag from './boot-safebag'
 import { useNdnWorkspace } from '../../Context'
 import { Certificate, ECDSA, createVerifier } from '@ndn/keychain'
@@ -94,10 +102,8 @@ export default function Workspace() {
 
   return (
     <Stack spacing={2}>
-      <Show when={booted() && issuerPrvKey() && issuerId()}>
-        <Typography color="secondary" component={'span'}>
-          You own your workspace, create keys for others?
-        </Typography>
+      <Show when={booted()}>
+        <GenerateCertificate issuerPrvKey={issuerPrvKey()} issuerPubKey={undefined} issuerId={issuerId()} />
       </Show>
       <AppNamespace trustAnchor={trustAnchor()} setTrustAnchor={setTrustAnchor} readOnly={inProgress() || booted()} />
       <Switch>
