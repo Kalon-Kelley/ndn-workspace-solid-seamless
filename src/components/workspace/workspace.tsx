@@ -23,6 +23,7 @@ export default function Workspace() {
     trustAnchor: initAnchor,
     ownCertificate: initCertificate,
     issuerPrvKey,
+    issuerPubKey,
     issuerId,
   } = useNdnWorkspace()!
   const [trustAnchor, setTrustAnchor] = createSignal<Certificate | undefined>(initAnchor())
@@ -103,7 +104,7 @@ export default function Workspace() {
   return (
     <Stack spacing={2}>
       <Show when={booted()}>
-        <GenerateCertificate issuerPrvKey={issuerPrvKey()} issuerPubKey={undefined} issuerId={issuerId()} />
+        <GenerateCertificate issuerPrvKey={issuerPrvKey()} issuerPubKey={issuerPubKey()} issuerId={issuerId()} />
       </Show>
       <AppNamespace trustAnchor={trustAnchor()} setTrustAnchor={setTrustAnchor} readOnly={inProgress() || booted()} />
       <Switch>

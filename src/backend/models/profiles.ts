@@ -11,6 +11,7 @@ export type Profile = {
   prvKeyB64: string
   ownCertificateB64: string
   issuerPrvKeyB64?: string
+  issuerPubKeyB64?: string
   issuerId?: string
 }
 
@@ -23,9 +24,11 @@ export function toBootParams(profile: Profile) {
   const certBytes = base64ToBytes(profile.ownCertificateB64)
   const ownCertificate = Certificate.fromData(Decoder.decode(certBytes, Data))
   let issuerPrvKey
+  let issuerPubKey
   let issuerId
-  if (profile.issuerPrvKeyB64 && profile.issuerId) {
+  if (profile.issuerPrvKeyB64 && profile.issuerId && profile.issuerPubKeyB64) {
     issuerPrvKey = base64ToBytes(profile.issuerPrvKeyB64)
+    issuerPubKey = base64ToBytes(profile.issuerPubKeyB64)
     issuerId = Component.from(profile.issuerId)
   }
   return {
@@ -33,6 +36,7 @@ export function toBootParams(profile: Profile) {
     prvKey,
     ownCertificate,
     ...(issuerPrvKey && { issuerPrvKey }),
+    ...(issuerPubKey && { issuerPubKey }),
     ...(issuerId && { issuerId }),
   }
 }
@@ -42,6 +46,7 @@ export function fromBootParams(params: {
   prvKey: Uint8Array
   ownCertificate: Certificate
   issuerPrvKey?: Uint8Array
+  issuerPubKey?: Uint8Array
   issuerId?: Component
 }): Profile {
   const certWire = Encoder.encode(params.ownCertificate.data)
@@ -56,9 +61,11 @@ export function fromBootParams(params: {
   const appPrefix = params.trustAnchor.name.getPrefix(params.trustAnchor.name.length - 4)
 
   let issuerPrvKeyB64
+  let issuerPubKeyB64
   let issuerId
-  if (params.issuerPrvKey && params.issuerId) {
+  if (params.issuerPrvKey && params.issuerId && params.issuerPubKey) {
     issuerPrvKeyB64 = bytesToBase64(params.issuerPrvKey)
+    issuerPubKeyB64 = bytesToBase64(params.issuerPubKey)
     issuerId = params.issuerId.toString()
   }
 
@@ -69,6 +76,7 @@ export function fromBootParams(params: {
     prvKeyB64: prvKeyB64,
     ownCertificateB64: certB64,
     ...(issuerPrvKeyB64 && { issuerPrvKeyB64 }),
+    ...(issuerPubKeyB64 && { issuerPubKeyB64 }),
     ...(issuerId && { issuerId }),
   }
 }
@@ -82,6 +90,7 @@ export async function createWorkspace(workspaceName: string, user: string) {
   const wsPvt = createSigner(wsKeyName, algo, wsGen)
   const wsPub = createVerifier(wsKeyName, algo, wsGen)
   const wsPrvKeyBits = await crypto.subtle.exportKey('pkcs8', wsGen.privateKey)
+  const wsPubKeyBits = await crypto.subtle.exportKey('spki', wsGen.publicKey);
   const wsCert = await Certificate.selfSign({
     privateKey: wsPvt,
     publicKey: wsPub,
@@ -103,6 +112,7 @@ export async function createWorkspace(workspaceName: string, user: string) {
     prvKey: new Uint8Array(userPrvKeyBits),
     ownCertificate: userCert,
     issuerPrvKey: new Uint8Array(wsPrvKeyBits),
+    issuerPubKey: new Uint8Array(wsPubKeyBits),
     issuerId: issuerId,
   }))
 }
