@@ -35,10 +35,7 @@ export default function GenerateCertificate(props: {
 
   const onGenerate = () => {
     console.log('Generating certificate for specified identity')
-    if (!props.issuerId || !props.issuerPrvKey || !props.issuerPubKey) {
-      return
-    }
-    ECDSA.cryptoGenerate({ importPkcs8: [props.issuerPrvKey, props.issuerPubKey] }, true)
+    ECDSA.cryptoGenerate({ importPkcs8: [props.issuerPrvKey!, props.issuerPubKey!] }, true)
       .then((gen) => {
         const wsName = CertNaming.makeKeyName(Name.from('test' as NameLike))
         const prvKey = createSigner(wsName, ECDSA, gen)

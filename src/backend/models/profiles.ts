@@ -116,3 +116,25 @@ export async function createWorkspace(workspaceName: string, user: string) {
     issuerId: issuerId,
   }))
 }
+
+export async function createUser(user: string): Promise<[Certificate, Uint8Array]> {
+  const algo = ECDSA
+  const keyName = CertNaming.makeKeyName(Name.from(user as NameLike))
+  const gen = await algo.cryptoGenerate({}, true)
+  const pvt = createSigner(keyName, algo, gen)
+  const pub = createVerifier(keyName, algo, gen)
+  const prvKeyBits = await crypto.subtle.exportKey('pkcs8', gen.privateKey)
+  const ssCert = await Certificate.selfSign({
+    privateKey: pvt,
+    publicKey: pub,
+  })
+  return [ssCert, new Uint8Array(prvKeyBits)]
+}
+
+export async function addProfile(trustAnchor: Certificate, prvKey: Uint8Array, ownCertificate: Certificate) {
+  await profiles.save(fromBootParams({
+    trustAnchor,
+    prvKey,
+    ownCertificate,
+  }))
+}
