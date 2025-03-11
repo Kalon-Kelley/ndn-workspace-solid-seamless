@@ -29,7 +29,6 @@ export function CreateWorkspace(props: {
   const onCreateWorkspace = () => {
     const workspace = workspaceName().trim()
     const identity = workspace.concat('/', workspaceIdentity().trim())
-    console.log('Creating a workspace', workspaceName(), 'With owner identity', identity)
     createWorkspace(workspace, identity)
       .then(() => db.loadAll())
       .then((items) => props.setProfiles(items))
@@ -112,6 +111,7 @@ export function JoinWorkspace(props: {
   const [workspaceName, setWorkspaceName] = createSignal('')
   const [workspaceIdentity, setWorkspaceIdentity] = createSignal('')
   const [identityPrvKeyBits, setIdentityPrvKeyBits] = createSignal<Uint8Array>()
+  const [csr, setCsr] = createSignal('')
   const [trustAnchor, setTrustAnchor] = createSignal('')
   const [certificate, setCertificate] = createSignal('')
   const [csrGenerated, setCsrGenerated] = createSignal(false);
@@ -120,17 +120,15 @@ export function JoinWorkspace(props: {
   const onGenerateCSR = () => {
     const workspace = workspaceName().trim()
     const identity = workspace.concat('/', workspaceIdentity().trim())
-    console.log('Creating a CSR for identity', identity)
     createUser(identity)
       .then(([sscert, pvtKey]) => {
         setIdentityPrvKeyBits(pvtKey)
+        setCsr(bytesToBase64(Encoder.encode(sscert.data)))
         setCsrGenerated(true)
-        console.log('SS CERT\n', bytesToBase64(Encoder.encode(sscert.data)))
       })
   }
 
   const onJoinWorkspace = () => {
-    console.log('Workapce Joined')
     const trustAnchorCertificate = Certificate.fromData(Decoder.decode(base64ToBytes(trustAnchor()), Data))
     const identityCertificate = Certificate.fromData(Decoder.decode(base64ToBytes(certificate()), Data))
     addProfile(trustAnchorCertificate, identityPrvKeyBits()!, identityCertificate)
@@ -216,6 +214,20 @@ export function JoinWorkspace(props: {
               'row-gap': '10px',
             }}
           >
+            <TextField
+              fullWidth
+              multiline
+              label="CSR"
+              name="csr"
+              type="text"
+              inputProps={{
+                style: {
+                  'font-family': '"Roboto Mono", ui-monospace, monospace',
+                  'white-space': 'pre',
+                },
+              }}
+              value={csr()}
+            />
             <TextField
               fullWidth
               required
