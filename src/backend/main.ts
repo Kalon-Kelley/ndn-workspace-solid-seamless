@@ -32,9 +32,11 @@ export let nodeId: Name | undefined
 
 export let trustAnchor: Certificate | undefined
 export let ownCertificate: Certificate | undefined
-export let issuerPrvKey: Uint8Array | undefined
-export let issuerPubKey: Uint8Array | undefined
-export let issuerId: Component | undefined
+export let issuer: {
+  prvKey: Uint8Array;
+  pubKey: Uint8Array;
+  id: Component;
+} | undefined;
 
 export let rootDoc: RootDocStore | undefined
 
@@ -142,9 +144,11 @@ export async function bootstrapWorkspace(opts: {
   prvKey: Uint8Array
   ownCertificate: Certificate
   inMemory?: boolean
-  issuerPrvKey?: Uint8Array
-  issuerPubKey?: Uint8Array
-  issuerId?: Component
+  issuer?: {
+    prvKey: Uint8Array
+    pubKey: Uint8Array
+    id: Component
+  }
 }) {
   if (bootstrapping) {
     console.error('Bootstrapping in progress or done')
@@ -155,14 +159,7 @@ export async function bootstrapWorkspace(opts: {
 
   trustAnchor = opts.trustAnchor
   ownCertificate = opts.ownCertificate
-  issuerPrvKey = opts.issuerPrvKey
-  issuerPubKey = opts.issuerPubKey
-  issuerId = opts.issuerId
-
-  if (issuerPrvKey) {
-    console.log('Workspace was', issuerId, 'created with prv key', issuerPrvKey,
-      'and pub key', issuerPubKey)
-  }
+  issuer = opts.issuer
 
   // Certificates
   // To switch to persistent storage:

@@ -4,15 +4,19 @@ import { Decoder, Encoder } from '@ndn/tlv'
 import { Component, Data, ValidityPeriod, Name, type NameLike } from '@ndn/packet'
 import { TypedModel } from './typed-models'
 
+export type Issuer = {
+  prvKeyB64: string
+  pubKeyB64: string
+  id: string
+}
+
 export type Profile = {
   workspaceName: string
   nodeId: string
   trustAnchorB64: string
   prvKeyB64: string
   ownCertificateB64: string
-  issuerPrvKeyB64?: string
-  issuerPubKeyB64?: string
-  issuerId?: string
+  issuer?: Issuer
 }
 
 export const profiles = new TypedModel<Profile>('profiles', (profile) => profile.nodeId)
@@ -23,21 +27,19 @@ export function toBootParams(profile: Profile) {
   const trustAnchor = Certificate.fromData(Decoder.decode(anchorBytes, Data))
   const certBytes = base64ToBytes(profile.ownCertificateB64)
   const ownCertificate = Certificate.fromData(Decoder.decode(certBytes, Data))
-  let issuerPrvKey
-  let issuerPubKey
-  let issuerId
-  if (profile.issuerPrvKeyB64 && profile.issuerId && profile.issuerPubKeyB64) {
-    issuerPrvKey = base64ToBytes(profile.issuerPrvKeyB64)
-    issuerPubKey = base64ToBytes(profile.issuerPubKeyB64)
-    issuerId = Component.from(profile.issuerId)
+  let issuer
+  if (profile.issuer) {
+    issuer = {
+      prvKey: base64ToBytes(profile.issuer.prvKeyB64),
+      pubKey: base64ToBytes(profile.issuer.pubKeyB64),
+      id: Component.from(profile.issuer.id),
+    }
   }
   return {
     trustAnchor,
     prvKey,
     ownCertificate,
-    ...(issuerPrvKey && { issuerPrvKey }),
-    ...(issuerPubKey && { issuerPubKey }),
-    ...(issuerId && { issuerId }),
+    ...(issuer && { issuer }),
   }
 }
 
@@ -45,9 +47,11 @@ export function fromBootParams(params: {
   trustAnchor: Certificate
   prvKey: Uint8Array
   ownCertificate: Certificate
-  issuerPrvKey?: Uint8Array
-  issuerPubKey?: Uint8Array
-  issuerId?: Component
+  issuer?: {
+    prvKey: Uint8Array
+    pubKey: Uint8Array
+    id: Component
+  }
 }): Profile {
   const certWire = Encoder.encode(params.ownCertificate.data)
   const certB64 = bytesToBase64(certWire)
@@ -60,13 +64,13 @@ export function fromBootParams(params: {
   const nodeId = params.ownCertificate.name.getPrefix(params.ownCertificate.name.length - 4)
   const appPrefix = params.trustAnchor.name.getPrefix(params.trustAnchor.name.length - 4)
 
-  let issuerPrvKeyB64
-  let issuerPubKeyB64
-  let issuerId
-  if (params.issuerPrvKey && params.issuerId && params.issuerPubKey) {
-    issuerPrvKeyB64 = bytesToBase64(params.issuerPrvKey)
-    issuerPubKeyB64 = bytesToBase64(params.issuerPubKey)
-    issuerId = params.issuerId.toString()
+  let issuer: Issuer | undefined
+  if (params.issuer) {
+    issuer = {
+      prvKeyB64: bytesToBase64(params.issuer.prvKey),
+      pubKeyB64: bytesToBase64(params.issuer.pubKey),
+      id: params.issuer.id.toString(),
+    }
   }
 
   return {
@@ -75,9 +79,7 @@ export function fromBootParams(params: {
     trustAnchorB64: anchorB64,
     prvKeyB64: prvKeyB64,
     ownCertificateB64: certB64,
-    ...(issuerPrvKeyB64 && { issuerPrvKeyB64 }),
-    ...(issuerPubKeyB64 && { issuerPubKeyB64 }),
-    ...(issuerId && { issuerId }),
+    ...(issuer && { issuer }),
   }
 }
 
@@ -111,9 +113,11 @@ export async function createWorkspace(workspaceName: string, user: string) {
     trustAnchor: wsCert,
     prvKey: new Uint8Array(userPrvKeyBits),
     ownCertificate: userCert,
-    issuerPrvKey: new Uint8Array(wsPrvKeyBits),
-    issuerPubKey: new Uint8Array(wsPubKeyBits),
-    issuerId: issuerId,
+    issuer: {
+      prvKey: new Uint8Array(wsPrvKeyBits),
+      pubKey: new Uint8Array(wsPubKeyBits),
+      id: issuerId,
+    }
   }))
 }
 

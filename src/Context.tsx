@@ -35,16 +35,20 @@ type ContextType = {
     prvKey: Uint8Array
     ownCertificate: Certificate
     inMemory?: boolean
-    issuerPrvKey?: Uint8Array
-    issuerPubKey?: Uint8Array
-    issuerId?: Component
+    issuer?: {
+      prvKey: Uint8Array
+      pubKey: Uint8Array
+      id: Component
+    }
   }) => Promise<void>
   stopWorkspace: () => Promise<void>
   trustAnchor: () => Certificate | undefined
   ownCertificate: () => Certificate | undefined
-  issuerPrvKey: () => Uint8Array | undefined
-  issuerPubKey: () => Uint8Array | undefined
-  issuerId: () => Component | undefined
+  issuer: () => {
+    prvKey: Uint8Array
+    pubKey: Uint8Array
+    id: Component
+  } | undefined
   fileSystemSupported: Accessor<boolean>
   theme: Accessor<Theme<Breakpoint> | undefined>
   setTheme: Setter<Theme<Breakpoint> | undefined>
@@ -114,9 +118,7 @@ export function NdnWorkspaceProvider(props: ParentProps<Record<string, unknown>>
       return main.trustAnchor
     },
     ownCertificate: () => main.ownCertificate,
-    issuerPrvKey: () => main.issuerPrvKey,
-    issuerPubKey: () => main.issuerPubKey,
-    issuerId: () => main.issuerId,
+    issuer: () => main.issuer,
     fileSystemSupported: fileSystemSupported,
     theme,
     setTheme,

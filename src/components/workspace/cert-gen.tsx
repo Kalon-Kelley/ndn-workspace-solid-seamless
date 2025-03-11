@@ -19,9 +19,11 @@ import { Show, createEffect, createSignal } from 'solid-js'
 import { ECDSA, createSigner, createVerifier, Certificate, CertNaming, SigningAlgorithmListFull } from "@ndn/keychain"
 
 export default function GenerateCertificate(props: {
-  issuerPrvKey: Uint8Array | undefined
-  issuerPubKey: Uint8Array | undefined
-  issuerId: Component | undefined
+  issuer: {
+    prvKey: Uint8Array
+    pubKey: Uint8Array
+    id: Component
+  } | undefined
 }) {
   const [csr, setCsr] = createSignal('')
   const [expanded, setExpanded] = createSignal(true);
@@ -35,7 +37,7 @@ export default function GenerateCertificate(props: {
 
   const onGenerate = () => {
     console.log('Generating certificate for specified identity')
-    ECDSA.cryptoGenerate({ importPkcs8: [props.issuerPrvKey!, props.issuerPubKey!] }, true)
+    ECDSA.cryptoGenerate({ importPkcs8: [props.issuer!.prvKey, props.issuer!.pubKey] }, true)
       .then((gen) => {
         const wsName = CertNaming.makeKeyName(Name.from('test' as NameLike))
         const prvKey = createSigner(wsName, ECDSA, gen)
@@ -44,7 +46,7 @@ export default function GenerateCertificate(props: {
             Certificate.issue({
               issuerPrivateKey: prvKey,
               publicKey: verifier,
-              issuerId: props.issuerId!,
+              issuerId: props.issuer!.id,
               validity: ValidityPeriod.daysFromNow(365),
             })
               .then((userCert) => console.log('CERT GENERATED', bytesToBase64(Encoder.encode(userCert.data))))
@@ -53,7 +55,7 @@ export default function GenerateCertificate(props: {
   }
 
   return (
-    <Show when={props.issuerPrvKey && props.issuerId}>
+    <Show when={props.issuer}>
       <Card>
         <CardHeader
           sx={{ textAlign: "left" }}

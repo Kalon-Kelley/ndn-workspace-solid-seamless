@@ -1,11 +1,4 @@
-import {
-  Button,
-  Stack,
-  Typography,
-  Card,
-  CardContent,
-  CardHeader,
-} from '@suid/material'
+import { Button, Stack } from '@suid/material'
 import { Show, Match, Switch, createEffect, createSignal } from 'solid-js'
 import AppNamespace from './app-namespace'
 import GenerateCertificate from './cert-gen'
@@ -22,9 +15,7 @@ export default function Workspace() {
     stopWorkspace,
     trustAnchor: initAnchor,
     ownCertificate: initCertificate,
-    issuerPrvKey,
-    issuerPubKey,
-    issuerId,
+    issuer,
   } = useNdnWorkspace()!
   const [trustAnchor, setTrustAnchor] = createSignal<Certificate | undefined>(initAnchor())
   const [certificate, setCertificate] = createSignal<Certificate | undefined>(initCertificate())
@@ -94,17 +85,10 @@ export default function Workspace() {
     })
   }
 
-  // Add onCertIssue to issue a certificate for the provided identity (take in
-  // the self signed cert as B64 and create a certificate from it)
-  // recreate the wsGen using
-  // ECDSA.cryptoGenerate({ importPkcs8: [prvKeyBits, pubKeyBits] }, true);
-  // then get the signer needed for Certificate.issue
-  // createSigner(name, ECDSA, gen)
-
   return (
     <Stack spacing={2}>
       <Show when={booted()}>
-        <GenerateCertificate issuerPrvKey={issuerPrvKey()} issuerPubKey={issuerPubKey()} issuerId={issuerId()} />
+        <GenerateCertificate issuer={issuer()} />
       </Show>
       <AppNamespace trustAnchor={trustAnchor()} setTrustAnchor={setTrustAnchor} readOnly={inProgress() || booted()} />
       <Switch>
