@@ -26,6 +26,8 @@ export default function GenerateCertificate(props: {
   } | undefined
 }) {
   const [csr, setCsr] = createSignal('')
+  const [signedCertificate, setSignedCertificate] = createSignal('')
+  const [signed, setSigned] = createSignal(false);
   const [expanded, setExpanded] = createSignal(true);
 
   // Add onCertIssue to issue a certificate for the provided identity (take in
@@ -49,7 +51,10 @@ export default function GenerateCertificate(props: {
               issuerId: props.issuer!.id,
               validity: ValidityPeriod.daysFromNow(365),
             })
-              .then((userCert) => console.log('CERT GENERATED', bytesToBase64(Encoder.encode(userCert.data))))
+              .then((userCert) => {
+                setSigned(true)
+                setSignedCertificate(bytesToBase64(Encoder.encode(userCert.data)))
+              })
           })
       })
   }
@@ -73,7 +78,7 @@ export default function GenerateCertificate(props: {
             </IconButton>
           }
         />
-        <Show when={expanded()}>
+        <Show when={expanded() && !signed()}>
           <Divider />
           <CardContent>
             {/* Expandable content goes here */}
@@ -104,6 +109,35 @@ export default function GenerateCertificate(props: {
               <Button onClick={onGenerate} variant="contained">
                 Generate
               </Button>
+            </div>
+          </CardContent>
+        </Show>
+        <Show when={expanded() && signed()}>
+          <Divider />
+          <CardContent>
+            {/* Expandable content goes here */}
+            <div
+              style={{
+                display: 'flex',
+                'flex-direction': 'column',
+                'align-items': 'flex-end',
+                'row-gap': '10px',
+              }}
+            >
+              <TextField
+                fullWidth
+                multiline
+                label="Signed Certificate"
+                name="signed-certificate"
+                type="text"
+                inputProps={{
+                  style: {
+                    'font-family': '"Roboto Mono", ui-monospace, monospace',
+                    'white-space': 'pre',
+                  },
+                }}
+                value={signedCertificate()}
+              />
             </div>
           </CardContent>
         </Show>
